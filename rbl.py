@@ -4,6 +4,8 @@
 import socket
 import urllib2
 import argparse
+from threading import Thread
+import functools
 
 rbls = [
     'b.barracudacentral.org',
@@ -115,18 +117,46 @@ rbls = [
 ]
 
 
+def timeout(timeout):
+    def decor(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            res = [None]
+
+            def newFunc():
+                res[0] = func(*args, **kwargs)
+            t = Thread(target=newFunc)
+            t.daemon = True
+            t.start()
+            t.join(timeout)
+            return res[0]
+        return wrapper
+    return decor
+
+
+@timeout(5)
+def _check_rbl(reverse_ip, rbl):
+    try:
+        socket.getaddrinfo(reverse_ip + '.' + rbl, 25)
+        return True
+    except socket.gaierror as dnserr:
+        return False
+
+
 def check_rbl(target_ip):
     # Reverse target IP address
     reverse_ip = '.'.join(target_ip.split('.')[::-1])
-    ban_list = []
+    res_list = []
     for rbl in rbls:
-        try:
-            socket.getaddrinfo(reverse_ip + '.' + rbl, 25)
-            ban_list.append(rbl)
-        except socket.gaierror as dnserr:
-            pass
+        res = _check_rbl(reverse_ip, rbl)
+        if res is True:
+            res = {'rbl': rbl, 'banned': True}
+            res_list.append(res)
+        elif res is None:
+            res = {'rbl': rbl, 'timeout': True}
+            res_list.append(res)
 
-    return ban_list
+    return res_list
 
 
 def get_external_ip():
@@ -152,7 +182,10 @@ def main():
         if rbl_result:
             print('Result for {0}:'.format(ip))
             for res in rbl_result:
-                print('Banned by {0}'.format(res))
+                if res.get('banned', False):
+                    print('Banned by {0}'.format(res['rbl']))
+                elif res.get('timeout', False):
+                    print('{0} response timeout'.format(res['rbl']))
             print('')
 
 
