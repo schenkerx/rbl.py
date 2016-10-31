@@ -7,6 +7,9 @@ import argparse
 from threading import Thread
 import functools
 
+# Timeout time, default is 5 seconds
+timeout_time = 5
+
 rbls = [
     'b.barracudacentral.org',
     'cbl.abuseat.org',
@@ -134,7 +137,7 @@ def timeout(timeout):
     return decor
 
 
-@timeout(5)
+@timeout(timeout_time)
 def _check_rbl(reverse_ip, rbl):
     try:
         socket.getaddrinfo(reverse_ip + '.' + rbl, 25)
@@ -176,7 +179,18 @@ def main():
         default=get_external_ip(),
         help='IP address to check (default: your public IP address)'
     )
+    argparser.add_argument(
+        '-t',
+        '--timeout',
+        type=int,
+        nargs=1,
+        default=[5],
+        help='Time before query timeout (default: 5 seconds)'
+    )
     args = argparser.parse_args()
+    # Read settings from command line
+    timeout_time = args.timeout[0]
+
     for ip in args.ip:
         rbl_result = check_rbl(ip)
         if rbl_result:
