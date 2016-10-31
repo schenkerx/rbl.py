@@ -1,6 +1,6 @@
 # rbl.py
 
-rbl.py is a handy tool for you to check your email server's IP reputation. It utilize major DNSBL services to achieve this goal.
+rbl.py is a handy tool to check your email server's IP reputation and setting correctness. It utilize major DNSBL services and other mechanisms to achieve this goal.
 
 ## Usage
 

@@ -162,6 +162,21 @@ def check_rbl(target_ip):
     return res_list
 
 
+def check_rdns(target_ip):
+    error = None
+    try:
+        domain = socket.gethostbyaddr(target_ip)[0]
+        ip = socket.getaddrinfo(domain, 25)[0][-1][0]
+    except socket.gaierror as domain_lookup_err:
+        error = 'RDNSMISMATCH'
+    except socket.herror as ip_lookup_err:
+        error = 'NORDNS'
+    if ip != target_ip:
+        error = 'RDNSMISMATCH'
+
+    return error
+
+
 def get_external_ip():
     # For compatibility of argparse
     return [urllib2.urlopen('http://ip.42.pl/raw').read()]
@@ -201,6 +216,14 @@ def main():
                 elif res.get('timeout', False):
                     print('{0} response timeout'.format(res['rbl']))
             print('')
+
+        rdns_error = check_rdns(ip)
+        if rdns_error is None:
+            print('rDNS check pass')
+        elif rdns_error == 'RDNSMISMATCH':
+            print('rDNS does not match your public IP address')
+        elif rdns_error == 'NORDNS':
+            print('There is no PTR record found for your public IP address')
 
 
 if __name__ == '__main__':
